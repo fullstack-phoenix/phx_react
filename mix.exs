@@ -1,13 +1,28 @@
 defmodule PhxReact.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :phx_react,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      description: "A package integrating Phoenix with React",
+      homepage_url: "https://livesaaskit.com/",
+      deps: deps(),
+      package: package()
+    ]
+  end
+
+  defp package() do
+    [
+      licenses: ["MIT"],
+      maintainers: ["Andreas Eriksson"],
+      links: %{
+        "Github" => "https://github.com/fullstack-phoenix/phx_react"
+      }
     ]
   end
 
