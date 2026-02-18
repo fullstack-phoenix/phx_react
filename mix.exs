@@ -22,13 +22,15 @@ defmodule PhxReact.MixProject do
       maintainers: ["Andreas Eriksson"],
       links: %{
         "Github" => "https://github.com/fullstack-phoenix/phx_react"
-      }
+      },
+      files: ~w(lib priv/templates priv/static .formatter.exs mix.exs README.md)
     ]
   end
 
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
+      mod: {PhxReact, []},
       extra_applications: [:logger]
     ]
   end
@@ -37,6 +39,8 @@ defmodule PhxReact.MixProject do
   defp deps do
     [
       {:phoenix, ">= 1.8.0"},
+      {:phoenix_html, "~> 4.1"},
+      {:jason, "~> 1.2"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end

@@ -1,0 +1,40 @@
+defmodule PhxReact.PageRegistry do
+  @moduledoc """
+  Registry mapping page keys to their modules and component keys.
+
+  Add entries here for each PhxReact page in your application.
+  The generator (mix phx.gen.react) will inject entries automatically.
+
+  ## Entry format
+
+      "page_key" => %{
+        key: "page_key",
+        component_key: "component_key",
+        module: MyAppWeb.Pages.MyPage
+      }
+  """
+
+  @pages %{
+  }
+
+  @spec fetch(String.t()) :: {:ok, map()} | {:error, :unknown_page}
+  def fetch(page_key) when is_binary(page_key) do
+    case Map.get(@pages, page_key) do
+      nil -> {:error, :unknown_page}
+      page -> {:ok, page}
+    end
+  end
+
+  @spec key_for_module(module()) :: {:ok, String.t()} | {:error, :unknown_page}
+  def key_for_module(module) do
+    case Enum.find(@pages, fn {_key, page} -> page.module == module end) do
+      {key, _page} -> {:ok, key}
+      nil -> {:error, :unknown_page}
+    end
+  end
+
+  @spec topic(String.t(), String.t()) :: String.t()
+  def topic(page_key, session_id) do
+    "phx_react:#{page_key}:#{session_id}"
+  end
+end

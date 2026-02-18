@@ -1,8 +1,7 @@
 defmodule PhxReactTest do
   use ExUnit.Case
-  doctest PhxReact
 
-  test "greets the world" do
-    assert PhxReact.hello() == :world
+  test "PhxReact.PageSupervisor is running" do
+    assert Process.whereis(PhxReact.PageSupervisor) != nil
   end
 end

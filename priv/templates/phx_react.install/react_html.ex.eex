@@ -1,0 +1,9 @@
+defmodule <%= @web_module %>.ReactHTML do
+  @moduledoc """
+  HTML templates for PhxReact pages.
+  """
+
+  use <%= @web_module %>, :html
+
+  embed_templates "react_html/*"
+end

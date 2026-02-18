@@ -1,0 +1,18 @@
+defmodule <%= @web_module %>.PhxReactSocket do
+  @moduledoc """
+  Socket for PhxReact channels.
+  """
+
+  use Phoenix.Socket
+
+  # Channel routes
+  channel "phx_react:*", PhxReact.Channel
+
+  @impl true
+  def connect(_params, socket, _connect_info) do
+    {:ok, socket}
+  end
+
+  @impl true
+  def id(_socket), do: nil
+end

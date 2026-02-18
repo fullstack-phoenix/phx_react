@@ -1,0 +1,186 @@
+defmodule <%= @web_module %>.ReactController do
+  use <%= @web_module %>, :controller
+
+  alias PhxReact.ActionDispatcher
+  alias PhxReact.PageRegistry
+  alias PhxReact.Socket
+
+  @token_salt "phx_react_session"
+
+  def render_named_page(conn, page_key, params \\ %{})
+      when is_binary(page_key) and is_map(params) do
+    show_page(conn, page_key, Map.put_new(params, "_page_key", page_key))
+  end
+
+  def show(conn, %{"page_key" => page_key} = params) do
+    show_page(conn, page_key, Map.delete(params, "page_key"))
+  end
+
+  def page(conn, %{"page_key" => page_key} = params) do
+    page_payload(conn, page_key, Map.delete(params, "page_key"))
+  end
+
+  def dispatch_action(conn, params) do
+    with {:ok, page_key} <- fetch_required_string(params, "page_key"),
+         {:ok, session_id} <- fetch_required_string(params, "session_id"),
+         {:ok, token} <- fetch_required_string(params, "token"),
+         {:ok, action_name} <- fetch_required_string(params, "action"),
+         {:ok, action_params} <- fetch_map(params, "params"),
+         {:ok, payload} <- verify_token(conn, token, page_key, session_id) do
+      context = %{
+        session_id: session_id,
+        current_path: URI.parse(conn.request_path).path,
+        remote_ip: inspect(conn.remote_ip),
+        page_params: Map.get(payload, "params", %{}),
+        session: Map.get(payload, "session", %{})
+      }
+
+      envelope = ActionDispatcher.dispatch(page_key, action_name, action_params, context)
+
+      conn
+      |> put_status(action_http_status(envelope))
+      |> json(envelope)
+    else
+      {:error, :missing_required_field} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(ActionDispatcher.error("invalid_request", "Missing required action fields"))
+
+      {:error, :invalid_params} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(ActionDispatcher.error("invalid_params", "Action params must be an object"))
+
+      {:error, :token_mismatch} ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(ActionDispatcher.error("invalid_token", "Token does not match page/session"))
+
+      {:error, _reason} ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(ActionDispatcher.error("invalid_token", "Token validation failed"))
+    end
+  end
+
+  defp show_page(conn, page_key, params) do
+    case build_page_payload(conn, page_key, params) do
+      {:ok, payload} ->
+        conn
+        |> assign(:page_key, payload.page_key)
+        |> assign(:page_module, payload.page_module)
+        |> assign(:component_key, payload.component_key)
+        |> assign(:session_id, payload.session_id)
+        |> assign(:initial_state, payload.initial_state)
+        |> assign(:token, payload.token)
+        |> assign(:topic, payload.topic)
+        |> assign(:page_endpoint, ~p"/react/pages")
+        |> assign(:action_endpoint, ~p"/react/actions")
+        |> assign(:csrf_token, Plug.CSRFProtection.get_csrf_token())
+        |> put_view(html: <%= @web_module %>.ReactHTML)
+        |> render(:shell)
+
+      {:error, :unknown_page} ->
+        send_resp(conn, :not_found, "Unknown page")
+    end
+  end
+
+  defp page_payload(conn, page_key, params) do
+    case build_page_payload(conn, page_key, params) do
+      {:ok, payload} ->
+        json(conn, %{status: "ok", page: payload})
+
+      {:error, :unknown_page} ->
+        conn
+        |> put_status(:not_found)
+        |> json(ActionDispatcher.error("unknown_page", "Unknown page key"))
+    end
+  end
+
+  defp build_page_payload(conn, page_key, params) do
+    with {:ok, page} <- PageRegistry.fetch(page_key),
+         {:ok, payload_params} <- normalize_params(params) do
+      session_id = Map.get(payload_params, "session_id", generate_session_id())
+      session = %{"session_id" => session_id}
+
+      case mount_page(page.module, payload_params, session) do
+        {:ok, mounted_socket} ->
+          token = sign_token(conn, page_key, session_id, payload_params, session)
+          page_module = page.module |> Module.split() |> Enum.join(".")
+
+          {:ok,
+           %{
+             page_key: page_key,
+             page_module: page_module,
+             component_key: page.component_key,
+             session_id: session_id,
+             token: token,
+             topic: PageRegistry.topic(page_key, session_id),
+             initial_state: mounted_socket.assigns
+           }}
+
+        {:error, _reason} ->
+          {:error, :page_mount_failed}
+      end
+    end
+  end
+
+  defp mount_page(page_module, params, session) do
+    socket = Socket.new(connected?: false)
+    page_module.mount(params, session, socket)
+  end
+
+  defp sign_token(conn, page_key, session_id, params, session) do
+    payload = %{
+      "page_key" => page_key,
+      "session_id" => session_id,
+      "params" => params,
+      "session" => session
+    }
+
+    Phoenix.Token.sign(conn, @token_salt, payload)
+  end
+
+  defp verify_token(conn, token, page_key, session_id) do
+    with {:ok, payload} <- Phoenix.Token.verify(conn, @token_salt, token, max_age: 24 * 60 * 60),
+         true <- Map.get(payload, "page_key") == page_key,
+         true <- Map.get(payload, "session_id") == session_id do
+      {:ok, payload}
+    else
+      false -> {:error, :token_mismatch}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp normalize_params(params) when is_map(params) do
+    params
+    |> Map.drop(["_format", "_method"])
+    |> Map.delete("csrf_token")
+    |> Map.delete("_csrf_token")
+    |> then(&{:ok, &1})
+  end
+
+  defp normalize_params(_params), do: {:error, :invalid_params}
+
+  defp fetch_required_string(params, key) when is_map(params) do
+    case Map.get(params, key) do
+      value when is_binary(value) and byte_size(value) > 0 -> {:ok, value}
+      _other -> {:error, :missing_required_field}
+    end
+  end
+
+  defp fetch_map(params, key) when is_map(params) do
+    case Map.get(params, key, %{}) do
+      value when is_map(value) -> {:ok, value}
+      _other -> {:error, :invalid_params}
+    end
+  end
+
+  defp action_http_status(%{status: :ok}), do: :ok
+  defp action_http_status(%{status: :redirect}), do: :ok
+  defp action_http_status(%{status: :error}), do: :unprocessable_entity
+
+  defp generate_session_id do
+    :crypto.strong_rand_bytes(16) |> Base.url_encode64(padding: false)
+  end
+end
