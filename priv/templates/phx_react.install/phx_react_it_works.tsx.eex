@@ -1,0 +1,44 @@
+import React from "react";
+import type { PageComponentProps } from "../phx-react/types";
+
+export default function PhxReactItWorks({ socket }: PageComponentProps) {
+  const pageTitle = (socket.state.page_title as string | undefined) || "PhxReact";
+  const message = (socket.state.message as string | undefined) || "";
+  const connectedAt = (socket.state.connected_at as string | undefined) || "unknown";
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="mx-auto max-w-2xl rounded bg-white p-6 shadow">
+        <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
+        <p className="mt-2 text-gray-700">{message}</p>
+
+        <dl className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</dt>
+            <dd className="mt-1 text-sm text-gray-900">{socket.status}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Connected At</dt>
+            <dd className="mt-1 text-sm text-gray-900">{connectedAt}</dd>
+          </div>
+        </dl>
+
+        {socket.error ? (
+          <p className="mt-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {socket.error}
+          </p>
+        ) : null}
+
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => socket.refreshPage("phx_react_it_works")}
+            className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

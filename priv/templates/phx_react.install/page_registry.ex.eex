@@ -4,6 +4,7 @@ defmodule PhxReact.PageRegistry do
 
   Add entries here for each PhxReact page in your application.
   The generator (mix phx.gen.react) will inject entries automatically.
+  The installer seeds a default "it works" page entry.
 
   ## Entry format
 
@@ -15,6 +16,11 @@ defmodule PhxReact.PageRegistry do
   """
 
   @pages %{
+    "phx_react_it_works" => %{
+      key: "phx_react_it_works",
+      component_key: "phx_react_it_works",
+      module: <%= @web_module %>.Pages.PhxReactItWorksPage
+    }
   }
 
   @spec fetch(String.t()) :: {:ok, map()} | {:error, :unknown_page}

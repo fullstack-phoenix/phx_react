@@ -74,7 +74,7 @@ defmodule <%= @web_module %>.ReactController do
         |> assign(:initial_state, payload.initial_state)
         |> assign(:token, payload.token)
         |> assign(:topic, payload.topic)
-        |> assign(:page_endpoint, "/react/pages")
+        |> assign(:page_endpoint, "/react/page_payloads")
         |> assign(:action_endpoint, "/react/actions")
         |> assign(:csrf_token, Plug.CSRFProtection.get_csrf_token())
         |> put_view(html: <%= @web_module %>.ReactHTML)

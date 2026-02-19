@@ -13,7 +13,9 @@ defmodule Mix.Tasks.PhxReact.Install do
     3. Generate `lib/<app>_web/controllers/react_controller.ex`
     4. Generate `lib/<app>_web/controllers/react_html.ex`
     5. Generate `lib/<app>_web/controllers/react_html/shell.html.heex`
-    6. Generate `lib/phx_react/page_registry.ex`
+    6. Generate `lib/<app>_web/pages/phx_react_it_works_page.ex`
+    7. Generate `assets/js/components/PhxReactItWorks.tsx`
+    8. Generate `lib/phx_react/page_registry.ex`
 
   After running this task, follow the printed instructions to complete the setup.
   """
@@ -33,6 +35,8 @@ defmodule Mix.Tasks.PhxReact.Install do
     generate_controller(web_path, binding)
     generate_html(web_path, binding)
     generate_shell_template(web_path)
+    generate_it_works_page(web_path, binding)
+    generate_it_works_component()
     generate_page_registry(binding)
 
     print_instructions(app, web_module, web_path)
@@ -109,14 +113,40 @@ defmodule Mix.Tasks.PhxReact.Install do
     end
   end
 
-  defp generate_page_registry(_binding) do
+  defp generate_page_registry(binding) do
     dest = "lib/phx_react/page_registry.ex"
 
     if File.exists?(dest) do
       Mix.shell().info([:yellow, "* skipping ", :reset, dest, " (already exists)"])
     else
       File.mkdir_p!(Path.dirname(dest))
-      content = render_template("page_registry.ex.eex", [])
+      content = render_template("page_registry.ex.eex", binding)
+      File.write!(dest, content)
+      Mix.shell().info([:green, "* creating ", :reset, dest])
+    end
+  end
+
+  defp generate_it_works_page(web_path, binding) do
+    dest = Path.join([web_path, "pages", "phx_react_it_works_page.ex"])
+
+    if File.exists?(dest) do
+      Mix.shell().info([:yellow, "* skipping ", :reset, dest, " (already exists)"])
+    else
+      File.mkdir_p!(Path.dirname(dest))
+      content = render_template("phx_react_it_works_page.ex.eex", binding)
+      File.write!(dest, content)
+      Mix.shell().info([:green, "* creating ", :reset, dest])
+    end
+  end
+
+  defp generate_it_works_component do
+    dest = "assets/js/components/PhxReactItWorks.tsx"
+
+    if File.exists?(dest) do
+      Mix.shell().info([:yellow, "* skipping ", :reset, dest, " (already exists)"])
+    else
+      File.mkdir_p!(Path.dirname(dest))
+      content = render_template("phx_react_it_works.tsx.eex", [])
       File.write!(dest, content)
       Mix.shell().info([:green, "* creating ", :reset, dest])
     end
@@ -165,11 +195,11 @@ defmodule Mix.Tasks.PhxReact.Install do
           post "/actions", ReactController, :dispatch_action
         end
 
-        # Optional: JSON endpoint for page payloads
+        # JSON endpoint used by the runtime for refresh/invalidation
         scope "/react", #{inspect(web_module)} do
           pipe_through :api
 
-          get "/pages/:page_key", ReactController, :page
+          get "/page_payloads/:page_key", ReactController, :page
         end
 
     3. Install React in your assets directory:
@@ -183,10 +213,11 @@ defmodule Mix.Tasks.PhxReact.Install do
 
     4. Import the PhxReact runtime in your assets/js/app.tsx (or app.js):
 
+        import PhxReactItWorks from "./components/PhxReactItWorks";
         import { initPhxReact } from "./phx-react/runtime";
 
         const PAGE_COMPONENTS = {
-          // Add your page components here
+          phx_react_it_works: PhxReactItWorks,
         };
 
         initPhxReact(PAGE_COMPONENTS);
@@ -196,6 +227,10 @@ defmodule Mix.Tasks.PhxReact.Install do
         {:jason, "~> 1.2"}
 
     Then run: mix deps.get
+
+    Verify your setup at:
+
+        /react/pages/phx_react_it_works
     """)
   end
 end

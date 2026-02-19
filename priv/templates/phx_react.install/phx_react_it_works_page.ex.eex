@@ -1,0 +1,16 @@
+defmodule <%= @web_module %>.Pages.PhxReactItWorksPage do
+  use PhxReact.Page
+
+  @impl true
+  def mount(_params, _session, socket) do
+    {:ok,
+     assign(socket, %{
+       page_title: "PhxReact It Works",
+       message: "PhxReact is connected and rendering server state.",
+       connected_at: DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+     })}
+  end
+
+  @impl true
+  def handle_event(_event, _params, socket), do: {:noreply, socket}
+end
