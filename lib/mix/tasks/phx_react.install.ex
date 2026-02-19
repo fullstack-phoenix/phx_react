@@ -143,27 +143,20 @@ defmodule Mix.Tasks.PhxReact.Install do
     "lib/#{app}_web"
   end
 
-  defp print_instructions(app, web_module, web_path) do
+  defp print_instructions(_app, web_module, web_path) do
     Mix.shell().info("""
 
     PhxReact installed successfully!
 
     Complete the setup by making the following manual changes:
 
-    1. Add PhxReact.PageSupervisor to your application children in lib/#{app}/application.ex:
-
-        children = [
-          # ... existing children ...
-          PhxReact.PageSupervisor
-        ]
-
-    2. Add the PhxReact socket to your endpoint in #{web_path}/endpoint.ex:
+    1. Add the PhxReact socket to your endpoint in #{web_path}/endpoint.ex:
 
         socket "/phx_react", #{inspect(web_module)}.PhxReactSocket,
           websocket: true,
           longpoll: false
 
-    3. Add routes to your router in #{web_path}/router.ex:
+    2. Add routes to your router in #{web_path}/router.ex:
 
         scope "/react", #{inspect(web_module)} do
           pipe_through :browser
@@ -178,6 +171,15 @@ defmodule Mix.Tasks.PhxReact.Install do
 
           get "/pages/:page_key", ReactController, :page
         end
+
+    3. Install React in your assets directory:
+
+        cd assets && npm install react react-dom
+        # or if using bun:
+        cd assets && bun add react react-dom
+
+        # TypeScript users should also add:
+        cd assets && npm install --save-dev @types/react @types/react-dom
 
     4. Import the PhxReact runtime in your assets/js/app.tsx (or app.js):
 

@@ -7,15 +7,8 @@ defmodule PhxReact do
 
   ## Usage
 
-  Add `PhxReact` to your application's supervision tree (handled automatically
-  when PhxReact is started as an OTP application):
-
-      # In your lib/<app>/application.ex
-      children = [
-        PhxReact.PageSupervisor
-      ]
-
   Run `mix phx_react.install` to generate the required files in your host app.
+  `PhxReact.PageSupervisor` is started automatically as part of the `:phx_react` OTP application.
   """
 
   use Application
